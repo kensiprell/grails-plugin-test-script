@@ -10,9 +10,12 @@ APP_DIR="$TEST_DIR/$APP_NAME"
 PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor"
 SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
 VERSIONS=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 )
+#VERSIONS=( 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 )
+VERSIONS_LEGACY=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 )
 DATE=$(date +%Y-%m-%d_%T)
 # Do not change any variables below this line.
 ARG_CHECK=false
+LEGACY=false
 read -d '' TEST_DEP <<EOF
 	dependencies {
 		test "org.gebish:geb-spock:$GEB_VER"
@@ -21,12 +24,17 @@ read -d '' TEST_DEP <<EOF
 		test "org.seleniumhq.selenium:selenium-support:$SELENIUM_VER"
 		test "org.spockframework:spock-grails-support:0.7-groovy-2.0"
 EOF
+read -d '' TEST_DEP_LEGACY <<EOF
+	dependencies {
+		test "org.gebish:geb-spock:$GEB_VER"
+		test "org.seleniumhq.selenium:selenium-chrome-driver:$SELENIUM_VER"
+		test "org.seleniumhq.selenium:selenium-firefox-driver:$SELENIUM_VER"
+		test "org.seleniumhq.selenium:selenium-support:$SELENIUM_VER"
+EOF
 read -d '' TEST_DEP_PLUGIN <<EOF
 	plugins {
 		test ":geb:$GEB_VER"
-		test(":spock:0.7") {
-			exclude "spock-grails-support"
-		}
+		test ":spock:0.7"
 EOF
 read -d '' HTML_START <<EOF
 <html>
@@ -150,13 +158,25 @@ testApp() {
 
 	echo "Modifying BuildConfig.groovy to resolve test dependencies ...."
 
-	perl -i -pe "s/dependencies {/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	for version in "${VERSIONS_LEGACY[@]}"; do
+		if [ "$version" == "$GRAILS_VER" ]; then
+			LEGACY=true
+			break
+		fi
+	done
+
+	if [ LEGACY ]; then
+		perl -i -pe "s/dependencies {/$TEST_DEP_LEGACY/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	else
+		perl -i -pe "s/dependencies {/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	fi
 
 	perl -i -pe "s/plugins {/$TEST_DEP_PLUGIN/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
-	# test using Chrome
+	# test using Firefox
 	grails test-app functional:
-	#grails -Dgeb.env=firefox test-app functional:
+	# test using Chrome
+	grails -Dgeb.env=chrome test-app functional:
 }
 
 runSingleTest() {
@@ -186,17 +206,16 @@ elif [ $1 == all ]; then
 	touch $HTMLFILE
 	echo "$HTML_START" >> $HTMLFILE
 	echo "<h1>Test Results by Grails Version</h1><h2>atmosphereTest-ALL-$DATE</h2></div>" >> $HTMLFILE
-	for version in "${VERSIONS[@]}"
-		do
-			GRAILS_VER=$version
-			(
-			testApp $GRAILS_VER $PLUGIN_VER
-			)
-			mkdir $GEB_DIR/$GRAILS_VER
-		  	cp -r $APP_DIR/target/test-reports/html $GEB_DIR/$GRAILS_VER
-			echo "<div class="clear"></div><p><a href=\"file://$GEB_DIR/$GRAILS_VER/html/index.html\">$GRAILS_VER</a></p>" >> $HTMLFILE
-			SUMMARY="$(cat $APP_DIR/target/test-reports/plain/TEST-functional-spock-IndexPageSpec.txt | sed -n 2p)"
-			echo "<p>$SUMMARY</p><p></p>" >> $HTMLFILE
+	for version in "${VERSIONS[@]}"; do
+		GRAILS_VER=$version
+		(
+		testApp $GRAILS_VER $PLUGIN_VER
+		)
+		mkdir $GEB_DIR/$GRAILS_VER
+		cp -r $APP_DIR/target/test-reports/html $GEB_DIR/$GRAILS_VER
+		echo "<div class="clear"></div><p><a href=\"file://$GEB_DIR/$GRAILS_VER/html/index.html\">$GRAILS_VER</a></p>" >> $HTMLFILE
+		SUMMARY="$(cat $APP_DIR/target/test-reports/plain/TEST-functional-spock-IndexPageSpec.txt | sed -n 2p)"
+		echo "<p>$SUMMARY</p><p></p>" >> $HTMLFILE
 	done
 	cp $APP_DIR/target/test-reports/html/stylesheet.css $GEB_DIR
 	echo "$HTML_END" >> $HTMLFILE
