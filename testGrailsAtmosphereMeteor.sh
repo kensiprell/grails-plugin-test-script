@@ -165,7 +165,7 @@ testApp() {
 		fi
 	done
 
-	if [ LEGACY ]; then
+	if [ LEGACY == true ]; then
 		perl -i -pe "s/dependencies {/$TEST_DEP_LEGACY/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	else
 		perl -i -pe "s/dependencies {/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
@@ -212,12 +212,12 @@ elif [ $1 == all ]; then
 		testApp $GRAILS_VER $PLUGIN_VER
 		)
 		mkdir $GEB_DIR/$GRAILS_VER
+		cp $APP_DIR/target/test-reports/html/stylesheet.css $GEB_DIR
 		cp -r $APP_DIR/target/test-reports/html $GEB_DIR/$GRAILS_VER
 		echo "<div class="clear"></div><p><a href=\"file://$GEB_DIR/$GRAILS_VER/html/index.html\">$GRAILS_VER</a></p>" >> $HTMLFILE
 		SUMMARY="$(cat $APP_DIR/target/test-reports/plain/TEST-functional-spock-IndexPageSpec.txt | sed -n 2p)"
 		echo "<p>$SUMMARY</p><p></p>" >> $HTMLFILE
 	done
-	cp $APP_DIR/target/test-reports/html/stylesheet.css $GEB_DIR
 	echo "$HTML_END" >> $HTMLFILE
 	echo ""
 	echo "Tests finished."
