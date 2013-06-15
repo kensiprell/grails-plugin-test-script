@@ -24,4 +24,4 @@ The example below uses all Grails versions defined in the script's VERSIONS arra
     testGrailsAtmosphereMeteor.sh all
 ``` 
 
-When finished, the script will start your browser with an appropriate page showing either the geb test results page for the first two options or showing a summary page with links to the individual geb tests if the all argument is given.
+When finished, the script will start your browser with an appropriate page showing either the geb test results page for the first two options or showing a summary page with links to the individual geb tests if the 'all' argument is given.
