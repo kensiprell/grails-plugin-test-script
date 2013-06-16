@@ -9,13 +9,14 @@ TEST_DIR="$(pwd)"
 APP_DIR="$TEST_DIR/$APP_NAME"
 PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor"
 SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
-VERSIONS=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 )
-#VERSIONS=( 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 )
-VERSIONS_LEGACY=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 )
+#VERSIONS=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 )
+# 2.0.2 and 2.0.3: java.lang.NullPointerException at 
+# org.apache.ivy.plugins.resolver.AbstractResolver.initRepositoryCacheManagerFromSettings(AbstractResolver.java:396)
+VERSIONS=( 2.0.0 2.0.1 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 )
+VERSIONS_LEGACY=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 )
 DATE=$(date +%Y-%m-%d_%T)
 # Do not change any variables below this line.
 ARG_CHECK=false
-LEGACY=false
 read -d '' TEST_DEP <<EOF
 	dependencies {
 		test "org.gebish:geb-spock:$GEB_VER"
@@ -106,6 +107,7 @@ packagePlugin() {
 testApp() {
 	GRAILS_VER=$1
 	PLUGIN_VER=$2
+	LEGACY=false
 
 	source ~/.gvm/bin/gvm-init.sh
 	gvm use grails $GRAILS_VER
@@ -165,7 +167,7 @@ testApp() {
 		fi
 	done
 
-	if [ LEGACY == true ]; then
+	if [ $LEGACY == true ]; then
 		perl -i -pe "s/dependencies {/$TEST_DEP_LEGACY/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	else
 		perl -i -pe "s/dependencies {/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
