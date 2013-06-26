@@ -12,7 +12,7 @@ SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
 #VERSIONS=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 )
 # 2.0.2 and 2.0.3: java.lang.NullPointerException at 
 # org.apache.ivy.plugins.resolver.AbstractResolver.initRepositoryCacheManagerFromSettings(AbstractResolver.java:396)
-VERSIONS=( 2.0.0 2.0.1 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 )
+VERSIONS=( 2.0.0 2.0.1 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 )
 VERSIONS_LEGACY=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 )
 DATE=$(date +%Y-%m-%d_%T)
 # Do not change any variables below this line.
@@ -147,6 +147,10 @@ testApp() {
 	cp $SOURCE_DIR/grails-app/conf/AtmosphereMeteorConfig.groovy $APP_DIR/grails-app/conf/
 
 	cp $SOURCE_DIR/grails-app/conf/UrlMappings.groovy $APP_DIR/grails-app/conf/
+	
+	cp $SOURCE_DIR/grails-app/views/layouts/main.gsp $APP_DIR/grails-app/views/layouts/
+	
+	cp $SOURCE_DIR/grails-app/atmosphere/org/grails/plugins/atmosphere_meteor_sample/* $APP_DIR/grails-app/atmosphere/org/grails/plugins/atmosphere_meteor_sample/
 
 	cp -r $SOURCE_DIR/grails-app/views/atmosphereTest $APP_DIR/grails-app/views/
 

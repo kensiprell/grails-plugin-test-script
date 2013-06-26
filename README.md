@@ -1,6 +1,6 @@
 ## grails-plugin-test-script
 
-I use this script along with the [grails-atmosphere-meteor-sample](https://github.com/kensiprell/grails-atmosphere-meteor-sample) application for testing the [grails-atmosphere-meteor](https://github.com/kensiprell/grails-atmosphere-meteor) plugin. Since the application is asynchronous, I use only [geb](http://www.grails.org/plugin/geb) functional tests.
+I use this script along with the [grails-atmosphere-meteor-sample](https://github.com/kensiprell/grails-atmosphere-meteor-sample) application for testing the [grails-atmosphere-meteor](https://github.com/kensiprell/grails-atmosphere-meteor) plugin using [geb](http://www.grails.org/plugin/geb) functional tests.
 
 It should run on any *nix system, but I've tested it only on OSX. It uses the following standard programs: bash, perl, and sed. It also requires the [gvmtool](http://gvmtool.net/) for switching between the Grails versions.
 
