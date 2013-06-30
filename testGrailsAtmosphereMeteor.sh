@@ -180,7 +180,7 @@ testApp() {
 	perl -i -pe "s/plugins {/$TEST_DEP_PLUGIN/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
 	# test using Firefox
-	grails test-app functional:
+	#grails test-app functional:
 	# test using Chrome
 	grails -Dgeb.env=chrome test-app functional:
 }
