@@ -32,6 +32,11 @@ read -d '' TEST_DEP_LEGACY <<EOF
 		test "org.seleniumhq.selenium:selenium-firefox-driver:$SELENIUM_VER"
 		test "org.seleniumhq.selenium:selenium-support:$SELENIUM_VER"
 EOF
+read -d '' TEST_DEP_PLUGIN <<EOF
+	plugins {
+		test ":geb:$GEB_VER"
+		test ":spock:0.7"
+EOF
 read -d '' HTML_START <<EOF
 <html>
 	<head>
@@ -88,47 +93,21 @@ openBrowser() {
 }
 
 packagePlugin() {
-	ARTIFACTORY=`curl -s --head http://localhost:8081/artifactory | head -n 1 | wc -l`
-	if [ $ARTIFACTORY == "0" ]; then
-		echo "Starting Artifactory ...."
-		artifactory.sh start
-		sleep 2s
-	fi
-
 	echo "Packaging plugin ...."
 	source ~/.gvm/bin/gvm-init.sh
-	VERSIONS_LENGTH=`expr ${#VERSIONS[@]} - 1`
-	GRAILS_DEFAULT_VER=${VERSIONS[$VERSIONS_LENGTH]}
-	gvm use grails $GRAILS_DEFAULT_VER
+	gvm default grails
 	cd $PLUGIN_DIR
 	PLUGIN_VER=$(grep "def version = .*$" AtmosphereMeteorGrailsPlugin.groovy | grep -o "\d.\d.\d")
 	rm *.zip
 	grails clean
-	#grails generate-pom
-	#grails compile
-	#grails maven-install
-	
-	grails publish-plugin --noScm --repository=localPluginReleases
-	#grails maven-deploy --repository=localPluginReleases
-	#grails publish-plugin --noScm --repository=localPluginSnapshots --snapshot
+	grails compile
+	grails maven-install
 }
 
 testApp() {
 	GRAILS_VER=$1
 	PLUGIN_VER=$2
 	LEGACY=false
-
-read -d '' TEST_DEP_PLUGIN <<EOF
-	plugins {
-		compile ":atmosphere-meteor:$PLUGIN_VER"
-		test ":geb:$GEB_VER"
-		test ":spock:0.7"
-EOF
-read -d '' REPOSITORIES <<EOF
-	repositories {
-		mavenRepo "http://localhost:8081/artifactory/plugins-snapshot-local/"
-		mavenRepo "http://localhost:8081/artifactory/plugins-release-local/"
-EOF
 
 	source ~/.gvm/bin/gvm-init.sh
 	gvm use grails $GRAILS_VER
@@ -146,29 +125,10 @@ EOF
 	echo "Creating test application ...."
 	grails create-app $APP_NAME
 	cd $APP_NAME
-	
-	echo "Modifying BuildConfig.groovy to resolve test and plugin dependencies ...."
 
-	perl -i -pe "s!repositories {!$REPOSITORIES!g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	echo "Installing plugin in test application ...."
+	grails install-plugin $PLUGIN_DIR/grails-atmosphere-meteor-$PLUGIN_VER.zip
 
-	perl -i -pe "s/plugins {/$TEST_DEP_PLUGIN/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-
-	for version in "${VERSIONS_LEGACY[@]}"; do
-		if [ "$version" == "$GRAILS_VER" ]; then
-			LEGACY=true
-			break
-		fi
-	done
-
-	if [ $LEGACY == true ]; then
-		perl -i -pe "s/dependencies {/$TEST_DEP_LEGACY/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-	else
-		perl -i -pe "s/dependencies {/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-	fi
-
-	#echo "Installing plugin in test application ...."
-	#grails install-plugin $PLUGIN_DIR/grails-atmosphere-meteor-$PLUGIN_VER.zip
-	
 	#echo "Adding inplace plugin to BuildConfig.groovy"
 	#echo 'grails.plugin.location.atmosphere_meteor = "/Users/Ken/Development/Plugins/grails-atmosphere-meteor"' > BuildConfig.groovy
 	#cat grails-app/conf/BuildConfig.groovy >> BuildConfig.groovy
@@ -201,6 +161,23 @@ EOF
 	cp -r $SOURCE_DIR/test/functional $APP_DIR/test/
 
 	cd $TEST_DIR/$APP_NAME
+
+	echo "Modifying BuildConfig.groovy to resolve test dependencies ...."
+
+	for version in "${VERSIONS_LEGACY[@]}"; do
+		if [ "$version" == "$GRAILS_VER" ]; then
+			LEGACY=true
+			break
+		fi
+	done
+
+	if [ $LEGACY == true ]; then
+		perl -i -pe "s/dependencies {/$TEST_DEP_LEGACY/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	else
+		perl -i -pe "s/dependencies {/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	fi
+
+	perl -i -pe "s/plugins {/$TEST_DEP_PLUGIN/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
 	# test using Firefox
 	#grails test-app functional:
@@ -260,5 +237,3 @@ else
 	runSingleTest $1
   	exit 0
 fi
-
-# artifactory.sh stop
