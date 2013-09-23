@@ -6,7 +6,7 @@ It should run on any *nix system, but I've tested it only on OSX. It uses the fo
 
 Usage:
 
-The example below uses the Grails version defined with $GRAILS_HOME:
+The example below uses the Grails version defined with gvm default:
 
 ```
     testGrailsAtmosphereMeteor.sh

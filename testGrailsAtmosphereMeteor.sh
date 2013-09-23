@@ -1,7 +1,7 @@
 #!/bin/bash
 BROWSER="/Applications/Google Chrome.app"
-GEB_VER=0.9.0
-SELENIUM_VER=2.33.0
+GEB_VER=0.9.1
+SELENIUM_VER=2.35.0
 APP_NAME="grails-atmosphere-meteor-test"
 PACKAGE="org.grails.plugins.atmosphere_meteor_sample"
 HOME_DIR=$(echo $HOME)
@@ -9,12 +9,10 @@ TEST_DIR="$(pwd)"
 APP_DIR="$TEST_DIR/$APP_NAME"
 PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor"
 SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
-#VERSIONS=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 )
-# 2.0.2 and 2.0.3: java.lang.NullPointerException at 
-# org.apache.ivy.plugins.resolver.AbstractResolver.initRepositoryCacheManagerFromSettings(AbstractResolver.java:396)
-VERSIONS=( 2.0.0 2.0.1 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 )
+VERSIONS=( 2.0.0 2.0.1 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0)
 VERSIONS_LEGACY=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 )
 DATE=$(date +%Y-%m-%d_%T)
+
 # Do not change any variables below this line.
 ARG_CHECK=false
 read -d '' TEST_DEP <<EOF
@@ -105,7 +103,7 @@ packagePlugin() {
 	rm *.zip
 	grails clean
 	#grails generate-pom
-	#grails compile
+	grails compile
 	#grails maven-install
 	
 	grails publish-plugin --noScm --repository=localPluginReleases
@@ -148,7 +146,14 @@ EOF
 	cd $APP_NAME
 	
 	echo "Modifying BuildConfig.groovy to resolve test and plugin dependencies ...."
-
+	
+	if [ "$GRAILS_VER" == "2.3.0" ]; then
+		perl -i -pe "s/console: .*$/console: false/" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		perl -i -pe "s/run: .*$/run: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		perl -i -pe "s/test: .*$/test: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		perl -i -pe "s/war: .*$/war: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy		
+	fi
+	
 	perl -i -pe "s!repositories {!$REPOSITORIES!g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
 	perl -i -pe "s/plugins {/$TEST_DEP_PLUGIN/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
@@ -205,7 +210,8 @@ EOF
 	# test using Firefox
 	#grails test-app functional:
 	# test using Chrome
-	grails -Dgeb.env=chrome test-app functional:
+	grails -Dgeb.env=chrome -Dgrails.project.fork.console=false -Dgrails.project.fork.run=false -Dgrails.project.fork.test=false -Dgrails.project.fork.war=false test-app functional:
+	#grails -Dgeb.env=chrome test-app functional:
 }
 
 runSingleTest() {
