@@ -1,7 +1,9 @@
 #!/bin/bash
 BROWSER="/Applications/Google Chrome.app"
-GEB_VER=0.9.1
+GEB_VER=0.9.2
 SELENIUM_VER=2.35.0
+JETTY_VER=8.1.13.v20130916
+JETTY_PLUGIN_VER=2.0.3
 APP_NAME="grails-atmosphere-meteor-test"
 PACKAGE="org.grails.plugins.atmosphere_meteor_sample"
 HOME_DIR=$(echo $HOME)
@@ -9,12 +11,16 @@ TEST_DIR="$(pwd)"
 APP_DIR="$TEST_DIR/$APP_NAME"
 PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor"
 SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
-VERSIONS=( 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0 2.3.1)
-#VERSIONS=( 2.0.0 2.0.1 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0)
+CONTAINERS=(jetty tomcat)
+#VERSIONS=( 2.0.0 2.0.1 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0 2.3.1 )
+VERSIONS=( 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0 2.3.1 )
+FORKED_VERSIONS=( 2.3.0 2.3.1 )
 VERSIONS_LEGACY=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 )
 DATE=$(date +%Y-%m-%d_%T)
 
 # Do not change any variables below this line.
+START_TIME=$(date +"%Y-%m-%d %T")
+START_SECONDS=$(date +"%s")
 ARG_CHECK=false
 read -d '' TEST_DEP <<EOF
 	dependencies {
@@ -31,6 +37,51 @@ read -d '' TEST_DEP_LEGACY <<EOF
 		test "org.seleniumhq.selenium:selenium-firefox-driver:$SELENIUM_VER"
 		test "org.seleniumhq.selenium:selenium-support:$SELENIUM_VER"
 EOF
+read -d '' JETTY_DEP1 <<EOF
+	dependencies {
+		provided(
+			"org.eclipse.jetty:jetty-http:$JETTY_VER",
+			"org.eclipse.jetty:jetty-server:$JETTY_VER",
+			"org.eclipse.jetty:jetty-webapp:$JETTY_VER",
+			"org.eclipse.jetty:jetty-plus:$JETTY_VER",
+			"org.eclipse.jetty:jetty-security:$JETTY_VER",
+			"org.eclipse.jetty:jetty-websocket:$JETTY_VER",
+			"org.eclipse.jetty:jetty-continuation:$JETTY_VER",
+			"org.eclipse.jetty:jetty-jndi:$JETTY_VER"
+		) {
+    		excludes "commons-el","ant", "sl4j-api","sl4j-simple","jcl104-over-slf4j"
+    		excludes "xercesImpl","xmlParserAPIs", "servlet-api"
+    		excludes "mail", "commons-lang"
+    		excludes([group: "org.eclipse.jetty.orbit", name: "javax.servlet"],
+            	[group: "org.eclipse.jetty.orbit", name: "javax.activation"],
+            	[group: "org.eclipse.jetty.orbit", name: "javax.mail.glassfish"],
+            	[group: "org.eclipse.jetty.orbit", name: "javax.transaction"])
+		 }
+EOF
+read -d '' JETTY_PLUGIN1 <<EOF
+		runtime(":jetty:$JETTY_PLUGIN_VER") {
+			excludes "jetty-http", "jetty-server", "jetty-webapp", "jetty-plus", "jetty-security", "jetty-websocket", "jetty-continuation", "jetty-jndi"
+		}
+EOF
+read -d '' JETTY_DEP2 <<EOF
+	dependencies {
+		provided(
+			"org.eclipse.jetty.aggregate:jetty-all:$JETTY_VER"
+		) {
+    		excludes "commons-el","ant", "sl4j-api","sl4j-simple","jcl104-over-slf4j"
+    		excludes "xercesImpl","xmlParserAPIs", "servlet-api"
+    		excludes "mail", "commons-lang"
+    		excludes([group: "org.eclipse.jetty.orbit", name: "javax.servlet"],
+            	[group: "org.eclipse.jetty.orbit", name: "javax.activation"],
+            	[group: "org.eclipse.jetty.orbit", name: "javax.mail.glassfish"],
+            	[group: "org.eclipse.jetty.orbit", name: "javax.transaction"])
+		 }
+EOF
+read -d '' JETTY_PLUGIN2 <<EOF
+		runtime(":jetty:$JETTY_PLUGIN_VER") {
+			excludes "jetty-all"
+		}
+EOF
 read -d '' HTML_START <<EOF
 <html>
 	<head>
@@ -40,37 +91,50 @@ read -d '' HTML_START <<EOF
 	<body>
 		<div id="report" class="container container_8">
 			<div class="grid_6 alpha">
-				<div class="grailslogo"></div>
+			<div class="grailslogo"></div>
+			<h1>atmosphere-meteor Test Results</h1>
+			<div class=clear></div>
+			<h2>&nbsp;</h2>
+			<h2>Started: START_TIME</h2>
+			<h2>&nbsp;</h2>
+			<h2>Finished: END_TIME</h2>
+			<h2>&nbsp;</h2>
+			<h2>Elapsed Time: ELAPSED_TIME</h2>
+			<h2>&nbsp;</h2>
 EOF
 read -d '' HTML_END <<EOF
-		</div>
 	</body>
 </html>
 EOF
 
 showUsage() {
-	echo "Usage: The script accepts zero or one argument."
-	echo "    Running the script without an argument will test the plugin and its associated" 
-	echo "    sample application with the Grails version defined in GRAILS_HOME."
-	echo "$ ./testGrailsAtmosphereMeteor.sh all"
+	echo "Usage: The script requires two arguments."
+	echo "$ ./testGrailsAtmosphereMeteor.sh all all"
 	echo "    will test the plugin and its application using all versions of"
-	echo "    Grails from 2.0.0 through the latest release."
-	echo "$ ./testGrailsAtmosphereMeteor.sh 2.1.0"
-	echo "    will test the plugin and its application using only version 2.1.0."
+	echo "    Grails from 2.1.0 through the latest release in all containers."
+	echo "    The test results are grouped by container and then version."
+	echo "$ ./testGrailsAtmosphereMeteor.sh jetty 2.1.0"
+	echo "    will test the plugin and its application using Jetty and Grails version 2.1.0."
 	echo "$TEST_DIR will contain a test summary and geb html pages."
 	exit 0
 }
 
-for version in "${VERSIONS[@]}"
+for container in "${CONTAINERS[@]}"
 	do
-		if [ "$version" == "$1" ]; then
+		if [ "$container" == "$1" ]; then
 			ARG_CHECK=true
 		fi
 done	
-if [ $# -eq 0 ]; then
+for version in "${VERSIONS[@]}"
+	do
+		if [ "$version" == "$2" ]; then
+			ARG_CHECK=true
+		fi
+done	
+if [ "$1" == "all" ]; then
 	ARG_CHECK=true
 fi
-if [ "$1" == "all" ]; then
+if [ "$2" == "all" ]; then
 	ARG_CHECK=true
 fi
 if [ $ARG_CHECK == false ]; then
@@ -97,24 +161,21 @@ packagePlugin() {
 	echo "Packaging plugin ...."
 	source ~/.gvm/bin/gvm-init.sh
 	VERSIONS_LENGTH=`expr ${#VERSIONS[@]} - 1`
-	GRAILS_DEFAULT_VER=${VERSIONS[$VERSIONS_LENGTH]}
-	gvm use grails $GRAILS_DEFAULT_VER
+	#GRAILS_DEFAULT_VER=${VERSIONS[$VERSIONS_LENGTH]}
+	#gvm use grails $GRAILS_DEFAULT_VER
+	gvm use grails 
 	cd $PLUGIN_DIR
 	PLUGIN_VER=$(grep "def version = .*$" AtmosphereMeteorGrailsPlugin.groovy | grep -o "\d.\d.\d")
 	rm *.zip
 	grails clean
-	#grails generate-pom
 	grails compile
-	#grails maven-install
-	
-	grails publish-plugin --noScm --repository=localPluginReleases
-	#grails maven-deploy --repository=localPluginReleases
-	#grails publish-plugin --noScm --repository=localPluginSnapshots --snapshot
+	grails publish-plugin --allow-overwrite --noScm --repository=localPluginReleases
 }
 
 testApp() {
-	GRAILS_VER=$1
-	PLUGIN_VER=$2
+	CONTAINER=$1
+	GRAILS_VER=$2
+	PLUGIN_VER=$3
 	LEGACY=false
 
 read -d '' TEST_DEP_PLUGIN <<EOF
@@ -130,13 +191,20 @@ read -d '' REPOSITORIES <<EOF
 EOF
 
 	source ~/.gvm/bin/gvm-init.sh
-	gvm use grails $GRAILS_VER
+	if [ $GRAILS_VER == "default" ]; then
+		gvm use grails
+	else
+		gvm use grails $GRAILS_VER
+	fi
 	
-	echo "Deleting cached plugin ...."
-	rm $HOME_DIR/.grails/$GRAILS_VER/cached-installed-plugins/atmosphere-meteor-*.zip
+	#echo "Deleting cached plugin ...."
+	#rm $HOME_DIR/.grails/$GRAILS_VER/cached-installed-plugins/atmosphere-meteor-*.zip
 
 	echo "Deleting cached project ...."
 	rm -r $HOME_DIR/.grails/$GRAILS_VER/projects/$APPNAME
+	
+	echo "Deleting Ivy atmosphere-meteor plugin cache ...."
+	rm -r $HOME_DIR/.grails/ivy-cache/org.grails.plugins/atmosphere*
 
 	echo "Deleting test application directory ...."
 	cd $TEST_DIR
@@ -148,11 +216,17 @@ EOF
 	
 	echo "Modifying BuildConfig.groovy to resolve test and plugin dependencies ...."
 	
-	if [ "$GRAILS_VER" == "2.3.0" ]; then
+	if [[ $FORKED_VERSIONS[$GRAILS_VER] ]]; then
 		perl -i -pe "s/console: .*$/console: false/" $APP_DIR/grails-app/conf/BuildConfig.groovy
 		perl -i -pe "s/run: .*$/run: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy
 		perl -i -pe "s/test: .*$/test: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy
 		perl -i -pe "s/war: .*$/war: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy		
+	fi
+	
+	if [ $CONTAINER == "jetty" ]; then
+		echo "Modifying BuildConfig.groovy to include Jetty dependencies ...."
+		perl -i -pe "s/dependencies {.*$/dependencies {$JETTY_DEP2/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		perl -i -pe "s/build.*:tomcat:.*$/$JETTY_PLUGIN2/" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	fi
 	
 	perl -i -pe "s!repositories {!$REPOSITORIES!g" $APP_DIR/grails-app/conf/BuildConfig.groovy
@@ -167,18 +241,10 @@ EOF
 	done
 
 	if [ $LEGACY == true ]; then
-		perl -i -pe "s/dependencies {/$TEST_DEP_LEGACY/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		perl -i -pe "s/dependencies {.*$/$TEST_DEP_LEGACY/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	else
-		perl -i -pe "s/dependencies {/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		perl -i -pe "s/dependencies {.*$/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	fi
-
-	#echo "Installing plugin in test application ...."
-	#grails install-plugin $PLUGIN_DIR/grails-atmosphere-meteor-$PLUGIN_VER.zip
-	
-	#echo "Adding inplace plugin to BuildConfig.groovy"
-	#echo 'grails.plugin.location.atmosphere_meteor = "/Users/Ken/Development/Plugins/grails-atmosphere-meteor"' > BuildConfig.groovy
-	#cat grails-app/conf/BuildConfig.groovy >> BuildConfig.groovy
-	#mv BuildConfig.groovy grails-app/conf/BuildConfig.groovy
 
 	grails refresh-dependencies
 
@@ -208,63 +274,118 @@ EOF
 
 	cd $TEST_DIR/$APP_NAME
 
+	# http://blog.jeffbeck.info/?p=185
+	grails package
 	# test using Firefox
 	#grails test-app functional:
 	# test using Chrome
-	grails -Dgeb.env=chrome -Dgrails.project.fork.console=false -Dgrails.project.fork.run=false -Dgrails.project.fork.test=false -Dgrails.project.fork.war=false test-app functional:
-	#grails -Dgeb.env=chrome test-app functional:
+	grails -Dgeb.env=chrome test-app functional:
 }
 
-runSingleTest() {
-	GRAILS_VER=$1
+runTest() {
+	CONTAINER=$1
+	GRAILS_VER=$2
+	GEB_DIR=$3
+	echo ""
+	echo "Testing Grails $GRAILS_VER in $CONTAINER ..."
 	(
-	testApp $GRAILS_VER $PLUGIN_VER
+	testApp $CONTAINER $GRAILS_VER $PLUGIN_VER
 	)
-  	cp -r $APP_DIR/target/test-reports/html $TEST_DIR/atmosphereTest-$GRAILS_VER-$DATE
-  	echo ""
-  	echo $(head -n 2 $APP_DIR/target/test-reports/plain/TEST-functional-spock-IndexPageSpec.txt)
-  	echo "Open the file below in your browser for the test details:"
-  	echo "$TEST_DIR/atmosphereTest-$GRAILS_VER-$DATE/index.html"
-  	openBrowser "$TEST_DIR/atmosphereTest-$GRAILS_VER-$DATE/index.html"	
+	mkdir $GEB_DIR/$CONTAINER
+	mkdir $GEB_DIR/$CONTAINER/$GRAILS_VER
+	cp $APP_DIR/target/test-reports/html/stylesheet.css $GEB_DIR/$CONTAINER
+	cp -r $APP_DIR/target/test-reports/html $GEB_DIR/$CONTAINER/$GRAILS_VER
+	echo "<div class="clear"></div><p><a href=\"file://$GEB_DIR/$CONTAINER/$GRAILS_VER/html/index.html\">$GRAILS_VER</a></p>" >> $HTMLFILE
+	SUMMARY="$(cat $APP_DIR/target/test-reports/plain/TEST-functional-spock-IndexPageSpec.txt | sed -n 2p)"
+	echo "<p>$SUMMARY</p><p></p>" >> $HTMLFILE
 }
 
-if [ $# -eq 0 ]; then
-	# testApp using $GRAILS_HOME version"
-	packagePlugin
-	runSingleTest $(gvm default grails | grep -o "\d.\d.\d")
-  	exit 0
-elif [ $1 == all ]; then
-	# testApp using all Grails versions ($VERSIONS)
-	packagePlugin
-	GEB_DIR=$TEST_DIR/atmosphereTest-ALL-$DATE
-	mkdir $GEB_DIR	
-	HTMLFILE=$GEB_DIR/index.html
-	touch $HTMLFILE
-	echo "$HTML_START" >> $HTMLFILE
-	echo "<h1>Test Results by Grails Version</h1><h2>atmosphereTest-ALL-$DATE</h2></div>" >> $HTMLFILE
-	for version in "${VERSIONS[@]}"; do
-		GRAILS_VER=$version
-		(
-		testApp $GRAILS_VER $PLUGIN_VER
-		)
-		mkdir $GEB_DIR/$GRAILS_VER
-		cp $APP_DIR/target/test-reports/html/stylesheet.css $GEB_DIR
-		cp -r $APP_DIR/target/test-reports/html $GEB_DIR/$GRAILS_VER
-		echo "<div class="clear"></div><p><a href=\"file://$GEB_DIR/$GRAILS_VER/html/index.html\">$GRAILS_VER</a></p>" >> $HTMLFILE
-		SUMMARY="$(cat $APP_DIR/target/test-reports/plain/TEST-functional-spock-IndexPageSpec.txt | sed -n 2p)"
-		echo "<p>$SUMMARY</p><p></p>" >> $HTMLFILE
-	done
+finishHTML() {
+	GEB_DIR=$1
+	cp $APP_DIR/target/test-reports/html/stylesheet.css $GEB_DIR
+	END_TIME=$(date +"%Y-%m-%d %T")
+	END_SECONDS=$(date +"%s")
+	SECONDS_TOTAL=$(($END_SECONDS-$START_SECONDS))
+	MINUTES=$(($SECONDS_TOTAL / 60))
+	if [ $MINUTES -eq 1 ]; then
+		MINUTES_TEXT="$MINUTES minute"
+	else
+		MINUTES_TEXT="$MINUTES minutes"
+	fi
+	SECONDS=$(($SECONDS_TOTAL % 60))
+	if [ $SECONDS -eq 1 ]; then
+		SECONDS_TEXT="$SECONDS second"
+	else
+		SECONDS_TEXT="$SECONDS seconds"
+	fi
+	ELAPSED_TIME="$MINUTES_TEXT and $SECONDS_TEXT"
+	perl -i -pe "s/START_TIME/$START_TIME/" $HTMLFILE
+	perl -i -pe "s/END_TIME/$END_TIME/" $HTMLFILE
+	perl -i -pe "s/ELAPSED_TIME/$ELAPSED_TIME/" $HTMLFILE	
 	echo "$HTML_END" >> $HTMLFILE
 	echo ""
 	echo "Tests finished."
  	echo "Open the file below in your browser for the test results:"
   	echo "$HTMLFILE"
   	openBrowser "$HTMLFILE"
+}
+
+packagePlugin
+
+if [ $# -eq 0 ]; then
+	# testApp using using all containers and most recent Grails version"
+	LENGTH=${#VERSIONS[@]}
+	LAST_POSITION=$((LENGTH - 1))
+	GRAILS_VER=${VERSIONS[${LAST_POSITION}]}
+	GEB_DIR=$TEST_DIR/atmosphereTest-DEFAULT-$DATE
+	mkdir $GEB_DIR	
+	HTMLFILE=$GEB_DIR/index.html
+	touch $HTMLFILE
+	echo "$HTML_START" >> $HTMLFILE
+	echo "<h1>Test Results by Container</h1></div><div class=clear></div>" >> $HTMLFILE
+	for container in "${CONTAINERS[@]}"; do
+		echo "<h1>$container</h1>" >> $HTMLFILE
+			runTest $container $GRAILS_VER $GEB_DIR
+	done
+	finishHTML $GEB_DIR
+  	exit 0
+elif [ $1 == all ]; then
+	# testApp using all containers	
+	GEB_DIR=$TEST_DIR/atmosphereTest-ALL-CONTAINERS-$DATE
+	mkdir $GEB_DIR	
+	HTMLFILE=$GEB_DIR/index.html
+	touch $HTMLFILE
+	echo "$HTML_START" >> $HTMLFILE
+	echo "<h1>Test Results by Container</h1></div><div class=clear></div>" >> $HTMLFILE
+	for container in "${CONTAINERS[@]}"; do
+		echo "<h1>$container</h1>" >> $HTMLFILE
+		if [ $2 == all ]; then
+			for version in "${VERSIONS[@]}"; do
+				runTest $container $version $GEB_DIR
+			done
+		else
+			runTest $container $2 $GEB_DIR
+		fi	
+	done
+	finishHTML $GEB_DIR
  	exit 0
 else
-	# testApp using a specific Grails version
-	packagePlugin
-	runSingleTest $1
+	# testApp using a specific container
+	CONTAINER=$1
+	GEB_DIR=$TEST_DIR/atmosphereTest-$CONTAINER-$DATE
+	mkdir $GEB_DIR	
+	HTMLFILE=$GEB_DIR/index.html
+	touch $HTMLFILE
+	echo "$HTML_START" >> $HTMLFILE
+	echo "<h1>Test Results for $CONTAINER</h1></div><div class=clear></div>" >> $HTMLFILE
+		if [ $2 == all ]; then
+		for version in "${VERSIONS[@]}"; do
+			runTest $CONTAINER $version $GEB_DIR
+		done
+	else
+		runTest $CONTAINER $2 $GEB_DIR
+	fi	
+	finishHTML $GEB_DIR
   	exit 0
 fi
 
