@@ -13,7 +13,7 @@ PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor"
 SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
 CONTAINERS=(jetty tomcat)
 #VERSIONS=( 2.0.0 2.0.1 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0 2.3.1 )
-VERSIONS=( 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0 2.3.1 )
+VERSIONS=( 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0 2.3.1 2.3.2 2.3.3 2.3.4 2.3.5 )
 FORKED_VERSIONS=( 2.3.0 2.3.1 )
 VERSIONS_LEGACY=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 )
 DATE=$(date +%Y-%m-%d_%T)
@@ -229,6 +229,8 @@ EOF
 		perl -i -pe "s/build.*:tomcat:.*$/$JETTY_PLUGIN2/" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	fi
 	
+	perl -i -pe "s/legacyResolve true/legacyResolve false/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+
 	perl -i -pe "s!repositories {!$REPOSITORIES!g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
 	perl -i -pe "s/plugins {/$TEST_DEP_PLUGIN/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
