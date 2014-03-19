@@ -1,7 +1,7 @@
 #!/bin/bash
 BROWSER="/Applications/Google Chrome.app"
 GEB_VER=0.9.2
-SELENIUM_VER=2.35.0
+SELENIUM_VER=2.40.0
 JETTY_VER=8.1.13.v20130916
 JETTY_PLUGIN_VER=2.0.3
 APP_NAME="grails-atmosphere-meteor-test"
@@ -12,10 +12,9 @@ APP_DIR="$TEST_DIR/$APP_NAME"
 PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor"
 SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
 CONTAINERS=(jetty tomcat)
-#VERSIONS=( 2.0.0 2.0.1 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0 2.3.1 )
-VERSIONS=( 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 2.2.0 2.2.1 2.2.2 2.2.3 2.2.4 2.3.0 2.3.1 2.3.2 2.3.3 2.3.4 2.3.5 )
+VERSIONS=( 2.1.5 2.2.4 2.3.7 )
 FORKED_VERSIONS=( 2.3.0 2.3.1 )
-VERSIONS_LEGACY=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 )
+LEGACY_VERSIONS=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 )
 DATE=$(date +%Y-%m-%d_%T)
 
 # Do not change any variables below this line.
@@ -161,8 +160,6 @@ packagePlugin() {
 	echo "Packaging plugin ...."
 	source ~/.gvm/bin/gvm-init.sh
 	VERSIONS_LENGTH=`expr ${#VERSIONS[@]} - 1`
-	#GRAILS_DEFAULT_VER=${VERSIONS[$VERSIONS_LENGTH]}
-	#gvm use grails $GRAILS_DEFAULT_VER
 	gvm use grails 
 	cd $PLUGIN_DIR
 	PLUGIN_VER=$(grep "def version = .*$" AtmosphereMeteorGrailsPlugin.groovy | grep -o "\d.\d.\d")
@@ -197,9 +194,6 @@ EOF
 		gvm use grails $GRAILS_VER
 	fi
 	
-	#echo "Deleting cached plugin ...."
-	#rm $HOME_DIR/.grails/$GRAILS_VER/cached-installed-plugins/atmosphere-meteor-*.zip
-
 	echo "Deleting cached project ...."
 	rm -r $HOME_DIR/.grails/$GRAILS_VER/projects/$APPNAME
 	
@@ -229,13 +223,19 @@ EOF
 		perl -i -pe "s/build.*:tomcat:.*$/$JETTY_PLUGIN2/" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	fi
 	
+	if [ $CONTAINER == "tomcat" ]; then
+		perl -i -pe 'print "grails.tomcat.nio = true\n" if $. == 1' $APP_DIR/grails-app/conf/BuildConfig.groovy
+	fi
+	
+	perl -i -pe "s/grails.servlet.version = \"2.5\"/grails.servlet.version = \"3.0\"/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	
 	perl -i -pe "s/legacyResolve true/legacyResolve false/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
 	perl -i -pe "s!repositories {!$REPOSITORIES!g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
 	perl -i -pe "s/plugins {/$TEST_DEP_PLUGIN/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
-	for version in "${VERSIONS_LEGACY[@]}"; do
+	for version in "${LEGACY_VERSIONS[@]}"; do
 		if [ "$version" == "$GRAILS_VER" ]; then
 			LEGACY=true
 			break
@@ -276,11 +276,7 @@ EOF
 
 	cd $TEST_DIR/$APP_NAME
 
-	# http://blog.jeffbeck.info/?p=185
 	grails package
-	# test using Firefox
-	#grails test-app functional:
-	# test using Chrome
 	grails -Dgeb.env=chrome test-app functional:
 }
 
