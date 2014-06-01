@@ -1,9 +1,8 @@
 #!/bin/bash
 BROWSER="/Applications/Google Chrome.app"
 GEB_VER=0.9.2
-SELENIUM_VER=2.40.0
-JETTY_VER=8.1.13.v20130916
-JETTY_PLUGIN_VER=2.0.3
+SELENIUM_VER=2.41.0
+JETTY_PLUGIN_VER=3.0.0
 APP_NAME="grails-atmosphere-meteor-test"
 PACKAGE="org.grails.plugins.atmosphere_meteor_sample"
 HOME_DIR=$(echo $HOME)
@@ -12,7 +11,7 @@ APP_DIR="$TEST_DIR/$APP_NAME"
 PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor"
 SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
 CONTAINERS=(jetty tomcat)
-VERSIONS=( 2.1.5 2.2.4 2.3.7 )
+VERSIONS=( 2.1.5 2.2.4 2.3.9 2.4.0 )
 FORKED_VERSIONS=( 2.3.0 2.3.1 )
 LEGACY_VERSIONS=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 )
 DATE=$(date +%Y-%m-%d_%T)
@@ -36,50 +35,27 @@ read -d '' TEST_DEP_LEGACY <<EOF
 		test "org.seleniumhq.selenium:selenium-firefox-driver:$SELENIUM_VER"
 		test "org.seleniumhq.selenium:selenium-support:$SELENIUM_VER"
 EOF
-read -d '' JETTY_DEP1 <<EOF
-	dependencies {
-		provided(
-			"org.eclipse.jetty:jetty-http:$JETTY_VER",
-			"org.eclipse.jetty:jetty-server:$JETTY_VER",
-			"org.eclipse.jetty:jetty-webapp:$JETTY_VER",
-			"org.eclipse.jetty:jetty-plus:$JETTY_VER",
-			"org.eclipse.jetty:jetty-security:$JETTY_VER",
-			"org.eclipse.jetty:jetty-websocket:$JETTY_VER",
-			"org.eclipse.jetty:jetty-continuation:$JETTY_VER",
-			"org.eclipse.jetty:jetty-jndi:$JETTY_VER"
-		) {
-    		excludes "commons-el","ant", "sl4j-api","sl4j-simple","jcl104-over-slf4j"
-    		excludes "xercesImpl","xmlParserAPIs", "servlet-api"
-    		excludes "mail", "commons-lang"
-    		excludes([group: "org.eclipse.jetty.orbit", name: "javax.servlet"],
-            	[group: "org.eclipse.jetty.orbit", name: "javax.activation"],
-            	[group: "org.eclipse.jetty.orbit", name: "javax.mail.glassfish"],
-            	[group: "org.eclipse.jetty.orbit", name: "javax.transaction"])
-		 }
+read -d '' JETTY_PLUGIN <<EOF
+		compile ":jetty:$JETTY_PLUGIN_VER"
 EOF
-read -d '' JETTY_PLUGIN1 <<EOF
-		runtime(":jetty:$JETTY_PLUGIN_VER") {
-			excludes "jetty-http", "jetty-server", "jetty-webapp", "jetty-plus", "jetty-security", "jetty-websocket", "jetty-continuation", "jetty-jndi"
-		}
-EOF
-read -d '' JETTY_DEP2 <<EOF
-	dependencies {
-		provided(
-			"org.eclipse.jetty.aggregate:jetty-all:$JETTY_VER"
-		) {
-    		excludes "commons-el","ant", "sl4j-api","sl4j-simple","jcl104-over-slf4j"
-    		excludes "xercesImpl","xmlParserAPIs", "servlet-api"
-    		excludes "mail", "commons-lang"
-    		excludes([group: "org.eclipse.jetty.orbit", name: "javax.servlet"],
-            	[group: "org.eclipse.jetty.orbit", name: "javax.activation"],
-            	[group: "org.eclipse.jetty.orbit", name: "javax.mail.glassfish"],
-            	[group: "org.eclipse.jetty.orbit", name: "javax.transaction"])
-		 }
-EOF
-read -d '' JETTY_PLUGIN2 <<EOF
-		runtime(":jetty:$JETTY_PLUGIN_VER") {
+read -d '' JETTY2_PLUGIN <<EOF
+		runtime(":jetty:2.0.3") {
 			excludes "jetty-all"
 		}
+EOF
+read -d '' JETTY2_DEP <<EOF
+	dependencies {
+		provided(
+			"org.eclipse.jetty.aggregate:jetty-all:8.1.13.v20130916"
+		) {
+    		excludes "commons-el","ant", "sl4j-api","sl4j-simple","jcl104-over-slf4j"
+    		excludes "xercesImpl","xmlParserAPIs", "servlet-api"
+    		excludes "mail", "commons-lang"
+    		excludes([group: "org.eclipse.jetty.orbit", name: "javax.servlet"],
+            	[group: "org.eclipse.jetty.orbit", name: "javax.activation"],
+            	[group: "org.eclipse.jetty.orbit", name: "javax.mail.glassfish"],
+            	[group: "org.eclipse.jetty.orbit", name: "javax.transaction"])
+		 }
 EOF
 read -d '' HTML_START <<EOF
 <html>
@@ -219,8 +195,12 @@ EOF
 	
 	if [ $CONTAINER == "jetty" ]; then
 		echo "Modifying BuildConfig.groovy to include Jetty dependencies ...."
-		perl -i -pe "s/dependencies {.*$/dependencies {$JETTY_DEP2/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-		perl -i -pe "s/build.*:tomcat:.*$/$JETTY_PLUGIN2/" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		if [ $GRAILS_VER == "2.1.5" ] || [ $GRAILS_VER == "2.2.4" ]; then
+			perl -i -pe "s/dependencies {.*$/dependencies {$JETTY2_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+			perl -i -pe "s/build.*:tomcat:.*$/$JETTY2_PLUGIN/" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		else
+			perl -i -pe "s/build.*:tomcat:.*$/$JETTY_PLUGIN/" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		fi
 	fi
 	
 	if [ $CONTAINER == "tomcat" ]; then
@@ -276,7 +256,7 @@ EOF
 
 	cd $TEST_DIR/$APP_NAME
 
-	grails package
+	grails compile
 	grails -Dgeb.env=chrome test-app functional:
 }
 
