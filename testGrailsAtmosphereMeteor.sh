@@ -1,6 +1,6 @@
 #!/bin/bash
 BROWSER="/Applications/Google Chrome.app"
-GEB_VER=0.9.2
+GEB_VER=0.9.3
 SELENIUM_VER=2.41.0
 JETTY_PLUGIN_VER=3.0.0
 APP_NAME="grails-atmosphere-meteor-test"
@@ -11,9 +11,10 @@ APP_DIR="$TEST_DIR/$APP_NAME"
 PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor"
 SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
 CONTAINERS=(jetty tomcat)
-VERSIONS=( 2.1.5 2.2.4 2.3.9 2.4.0 )
 FORKED_VERSIONS=( 2.3.0 2.3.1 )
-LEGACY_VERSIONS=( 2.0.0 2.0.1 2.0.2 2.0.3 2.0.4 2.1.0 2.1.1 2.1.2 2.1.3 2.1.4 2.1.5 )
+LEGACY_VERSIONS=( 2.1.5 )
+JETTY_VERSIONS=( 2.3.9 2.4.3 )
+VERSIONS=( 2.1.5 2.2.5 2.3.9 2.4.3 )
 DATE=$(date +%Y-%m-%d_%T)
 
 # Do not change any variables below this line.
@@ -37,25 +38,6 @@ read -d '' TEST_DEP_LEGACY <<EOF
 EOF
 read -d '' JETTY_PLUGIN <<EOF
 		compile ":jetty:$JETTY_PLUGIN_VER"
-EOF
-read -d '' JETTY2_PLUGIN <<EOF
-		runtime(":jetty:2.0.3") {
-			excludes "jetty-all"
-		}
-EOF
-read -d '' JETTY2_DEP <<EOF
-	dependencies {
-		provided(
-			"org.eclipse.jetty.aggregate:jetty-all:8.1.13.v20130916"
-		) {
-    		excludes "commons-el","ant", "sl4j-api","sl4j-simple","jcl104-over-slf4j"
-    		excludes "xercesImpl","xmlParserAPIs", "servlet-api"
-    		excludes "mail", "commons-lang"
-    		excludes([group: "org.eclipse.jetty.orbit", name: "javax.servlet"],
-            	[group: "org.eclipse.jetty.orbit", name: "javax.activation"],
-            	[group: "org.eclipse.jetty.orbit", name: "javax.mail.glassfish"],
-            	[group: "org.eclipse.jetty.orbit", name: "javax.transaction"])
-		 }
 EOF
 read -d '' HTML_START <<EOF
 <html>
@@ -85,26 +67,34 @@ EOF
 showUsage() {
 	echo "Usage: The script requires two arguments."
 	echo "$ ./testGrailsAtmosphereMeteor.sh all all"
-	echo "    will test the plugin and its application using all versions of"
-	echo "    Grails from 2.1.0 through the latest release in all containers."
+	echo "    will test the plugin and its application using the following Grails versions"
+	echo "    depending on which serverlet container is used."
+	echo "    Jetty: ${JETTY_VERSIONS[@]}"
+	echo "    Tomcat: ${VERSIONS[@]}"
 	echo "    The test results are grouped by container and then version."
-	echo "$ ./testGrailsAtmosphereMeteor.sh jetty 2.1.0"
-	echo "    will test the plugin and its application using Jetty and Grails version 2.1.0."
+	echo "$ ./testGrailsAtmosphereMeteor.sh jetty 2.3.9"
+	echo "    will test the plugin and its application using Jetty and Grails version 2.3.9."
 	echo "$TEST_DIR will contain a test summary and geb html pages."
 	exit 0
 }
 
-for container in "${CONTAINERS[@]}"
-	do
-		if [ "$container" == "$1" ]; then
-			ARG_CHECK=true
-		fi
-done	
-for version in "${VERSIONS[@]}"
-	do
-		if [ "$version" == "$2" ]; then
-			ARG_CHECK=true
-		fi
+for container in "${CONTAINERS[@]}"; do
+	if [ "$container" == "$1" ]; then
+		if [ "$container"  == "jetty" ]; then 
+			for version in "${JETTY_VERSIONS[@]}"; do
+				if [ "$version" == "$2" ]; then
+					ARG_CHECK=true
+				fi
+			done
+		fi	
+		if [ "$container"  == "tomcat" ]; then 
+			for version in "${VERSIONS[@]}"; do
+				if [ "$version" == "$2" ]; then
+					ARG_CHECK=true
+				fi
+			done
+		fi	
+	fi
 done	
 if [ "$1" == "all" ]; then
 	ARG_CHECK=true
@@ -194,13 +184,7 @@ EOF
 	fi
 	
 	if [ $CONTAINER == "jetty" ]; then
-		echo "Modifying BuildConfig.groovy to include Jetty dependencies ...."
-		if [ $GRAILS_VER == "2.1.5" ] || [ $GRAILS_VER == "2.2.4" ]; then
-			perl -i -pe "s/dependencies {.*$/dependencies {$JETTY2_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-			perl -i -pe "s/build.*:tomcat:.*$/$JETTY2_PLUGIN/" $APP_DIR/grails-app/conf/BuildConfig.groovy
-		else
-			perl -i -pe "s/build.*:tomcat:.*$/$JETTY_PLUGIN/" $APP_DIR/grails-app/conf/BuildConfig.groovy
-		fi
+		perl -i -pe "s/build.*:tomcat:.*$/$JETTY_PLUGIN/" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	fi
 	
 	if [ $CONTAINER == "tomcat" ]; then
@@ -278,6 +262,18 @@ runTest() {
 	echo "<p>$SUMMARY</p><p></p>" >> $HTMLFILE
 }
 
+runJettyTest() {
+	container="jetty"
+	echo "<h1>$container</h1>" >> $HTMLFILE
+	if [ $1 == "all" ]; then
+		for version in "${JETTY_VERSIONS[@]}"; do
+			runTest $container $version $GEB_DIR
+		done
+	else
+		runTest $container $1 $GEB_DIR
+	fi	
+}
+
 finishHTML() {
 	GEB_DIR=$1
 	cp $APP_DIR/target/test-reports/html/stylesheet.css $GEB_DIR
@@ -310,24 +306,7 @@ finishHTML() {
 
 packagePlugin
 
-if [ $# -eq 0 ]; then
-	# testApp using using all containers and most recent Grails version"
-	LENGTH=${#VERSIONS[@]}
-	LAST_POSITION=$((LENGTH - 1))
-	GRAILS_VER=${VERSIONS[${LAST_POSITION}]}
-	GEB_DIR=$TEST_DIR/atmosphereTest-DEFAULT-$DATE
-	mkdir $GEB_DIR	
-	HTMLFILE=$GEB_DIR/index.html
-	touch $HTMLFILE
-	echo "$HTML_START" >> $HTMLFILE
-	echo "<h1>Test Results by Container</h1></div><div class=clear></div>" >> $HTMLFILE
-	for container in "${CONTAINERS[@]}"; do
-		echo "<h1>$container</h1>" >> $HTMLFILE
-			runTest $container $GRAILS_VER $GEB_DIR
-	done
-	finishHTML $GEB_DIR
-  	exit 0
-elif [ $1 == all ]; then
+if [ $1 == "all" ]; then
 	# testApp using all containers	
 	GEB_DIR=$TEST_DIR/atmosphereTest-ALL-CONTAINERS-$DATE
 	mkdir $GEB_DIR	
@@ -336,13 +315,17 @@ elif [ $1 == all ]; then
 	echo "$HTML_START" >> $HTMLFILE
 	echo "<h1>Test Results by Container</h1></div><div class=clear></div>" >> $HTMLFILE
 	for container in "${CONTAINERS[@]}"; do
-		echo "<h1>$container</h1>" >> $HTMLFILE
-		if [ $2 == all ]; then
-			for version in "${VERSIONS[@]}"; do
-				runTest $container $version $GEB_DIR
-			done
-		else
-			runTest $container $2 $GEB_DIR
+		if [ $container == "jetty" ]; then
+			runJettyTest $2
+		else 
+			echo "<h1>$container</h1>" >> $HTMLFILE
+			if [ $2 == all ]; then
+				for version in "${VERSIONS[@]}"; do
+					runTest $container $version $GEB_DIR
+				done
+			else
+				runTest $container $2 $GEB_DIR
+			fi
 		fi	
 	done
 	finishHTML $GEB_DIR
@@ -356,15 +339,17 @@ else
 	touch $HTMLFILE
 	echo "$HTML_START" >> $HTMLFILE
 	echo "<h1>Test Results for $CONTAINER</h1></div><div class=clear></div>" >> $HTMLFILE
+	if [ $CONTAINER == "jetty" ]; then
+		runJettyTest $2
+	else 
 		if [ $2 == all ]; then
-		for version in "${VERSIONS[@]}"; do
-			runTest $CONTAINER $version $GEB_DIR
-		done
-	else
-		runTest $CONTAINER $2 $GEB_DIR
+			for version in "${VERSIONS[@]}"; do
+				runTest $CONTAINER $version $GEB_DIR
+			done
+		else
+			runTest $CONTAINER $2 $GEB_DIR
+		fi
 	fi	
 	finishHTML $GEB_DIR
   	exit 0
 fi
-
-# artifactory.sh stop
