@@ -197,7 +197,11 @@ EOF
 	
 	perl -i -pe "s/grails.servlet.version = \"2.5\"/grails.servlet.version = \"3.0\"/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	
-	perl -i -pe "s/legacyResolve true/legacyResolve false/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	if [ $GRAILS_VER == "2.1.5" ]; then
+		perl -i -pe "s/legacyResolve/\/\/legacyResolve/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	else
+		perl -i -pe "s/legacyResolve true/legacyResolve false/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	fi
 
 	perl -i -pe "s!repositories {!$REPOSITORIES!g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
