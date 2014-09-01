@@ -132,7 +132,11 @@ packagePlugin() {
 	rm *.zip
 	grails clean
 	grails compile
-	grails publish-plugin --allow-overwrite --noScm --repository=localPluginReleases
+	if [[ $PLUGIN_VER == *SNAPSHOT* ]]; then
+		grails publish-plugin --allow-overwrite --noScm --repository=localPluginSnapshots
+	else 
+  		grails publish-plugin --allow-overwrite --noScm --repository=localPluginReleases
+	fi
 }
 
 testApp() {

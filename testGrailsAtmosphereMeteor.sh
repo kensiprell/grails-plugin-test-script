@@ -128,11 +128,15 @@ packagePlugin() {
 	VERSIONS_LENGTH=`expr ${#VERSIONS[@]} - 1`
 	gvm use grails 
 	cd $PLUGIN_DIR
-	PLUGIN_VER=$(grep "def version = .*$" AtmosphereMeteorGrailsPlugin.groovy | grep -o "\d.\d.\d")
+	PLUGIN_VER=$(grep "def version = .*$" AtmosphereMeteorGrailsPlugin.groovy | grep -o \".*\" | tr -d '"')
 	rm *.zip
 	grails clean
 	grails compile
-	grails publish-plugin --allow-overwrite --noScm --repository=localPluginReleases
+	if [[ $PLUGIN_VER == *SNAPSHOT* ]]; then
+		grails publish-plugin --allow-overwrite --noScm --repository=localPluginSnapshots
+	else 
+  		grails publish-plugin --allow-overwrite --noScm --repository=localPluginReleases
+	fi
 }
 
 testApp() {
