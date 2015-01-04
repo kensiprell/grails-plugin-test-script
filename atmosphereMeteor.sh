@@ -14,7 +14,7 @@ CONTAINERS=(jetty tomcat)
 FORKED_VERSIONS=( 2.3.0 2.3.1 )
 LEGACY_VERSIONS=( 2.1.5 )
 JETTY_VERSIONS=( 2.3.9 2.4.3 )
-VERSIONS=( 2.1.5 2.2.5 2.3.9 2.4.3 )
+VERSIONS=( 2.1.5 2.2.5 2.3.9 2.4.4 )
 DATE=$(date +%Y-%m-%d_%T)
 
 # Do not change any variables below this line.
