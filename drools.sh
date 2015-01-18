@@ -239,7 +239,7 @@ EOF
 
 	cp -r $SOURCE_DIR/grails-app/conf/BootStrap.groovy $APP_DIR/grails-app/conf/
 
-	grails compile
+	grails clean
 	
 	grails -Dgeb.env=chrome test-app functional:
 }
