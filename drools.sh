@@ -1,15 +1,15 @@
 #!/bin/bash
 BROWSER="/Applications/Google Chrome.app"
-GEB_VER=0.9.3
+GEB_VER=0.10.0
 SELENIUM_VER=2.41.0
 JETTY_PLUGIN_VER=3.0.0
-APP_NAME="grails-vibe-test"
-PACKAGE="org.grails.plugins.vibe_sample"
+APP_NAME="grails-drools-sample"
+PACKAGE="grails.plugin.drools_sample"
 HOME_DIR=$(echo $HOME)
 TEST_DIR="$(pwd)"
 APP_DIR="$TEST_DIR/$APP_NAME"
-PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-vibe"
-SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-vibe-sample"
+PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-drools"
+SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-drools-sample"
 CONTAINERS=(jetty tomcat)
 FORKED_VERSIONS=( 2.3.0 2.3.1 )
 LEGACY_VERSIONS=( 2.1.5 )
@@ -49,7 +49,7 @@ read -d '' HTML_START <<EOF
 		<div id="report" class="container container_8">
 			<div class="grid_6 alpha">
 			<div class="grailslogo"></div>
-			<h1>vibe Test Results</h1>
+			<h1>drools Test Results</h1>
 			<div class=clear></div>
 			<h2>&nbsp;</h2>
 			<h2>Started: START_TIME</h2>
@@ -66,13 +66,13 @@ EOF
 
 showUsage() {
 	echo "Usage: The script requires two arguments."
-	echo "$ ./vibe.sh all all"
+	echo "$ ./drools.sh all all"
 	echo "    will test the plugin and its application using the following Grails versions"
 	echo "    depending on which serverlet container is used."
 	echo "    Jetty: ${JETTY_VERSIONS[@]}"
 	echo "    Tomcat: ${VERSIONS[@]}"
 	echo "    The test results are grouped by container and then version."
-	echo "$ ./vibe.sh jetty 2.3.9"
+	echo "$ ./drools.sh jetty 2.3.9"
 	echo "    will test the plugin and its application using Jetty and Grails version 2.3.9."
 	echo "$TEST_DIR will contain a test summary and geb html pages."
 	exit 0
@@ -128,7 +128,7 @@ packagePlugin() {
 	VERSIONS_LENGTH=`expr ${#VERSIONS[@]} - 1`
 	gvm use grails 
 	cd $PLUGIN_DIR
-	PLUGIN_VER=$(grep "def version = .*$" VibeGrailsPlugin.groovy | grep -o \".*\" | tr -d '"')
+	PLUGIN_VER=$(grep "def version = .*$" DroolsGrailsPlugin.groovy | grep -o \".*\" | tr -d '"')
 	rm *.zip
 	grails clean
 	grails compile
@@ -147,7 +147,7 @@ testApp() {
 
 read -d '' TEST_DEP_PLUGIN <<EOF
 	plugins {
-		compile ":vibe:$PLUGIN_VER"
+		compile ":drools:$PLUGIN_VER"
 		test ":geb:$GEB_VER"
 		test ":spock:0.7"
 EOF
@@ -167,8 +167,8 @@ EOF
 	echo "Deleting cached project ...."
 	rm -r $HOME_DIR/.grails/$GRAILS_VER/projects/$APPNAME
 	
-	echo "Deleting Ivy vibe plugin cache ...."
-	rm -r $HOME_DIR/.grails/ivy-cache/org.grails.plugins/vibe*
+	echo "Deleting Ivy drools plugin cache ...."
+	rm -r $HOME_DIR/.grails/ivy-cache/org.grails.plugins/drools*
 
 	echo "Deleting test application directory ...."
 	cd $TEST_DIR
@@ -190,12 +190,6 @@ EOF
 	if [ $CONTAINER == "jetty" ]; then
 		perl -i -pe "s/build.*:tomcat:.*$/$JETTY_PLUGIN/" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	fi
-	
-	if [ $CONTAINER == "tomcat" ]; then
-		perl -i -pe 'print "grails.tomcat.nio = true\n" if $. == 1' $APP_DIR/grails-app/conf/BuildConfig.groovy
-	fi
-	
-	perl -i -pe "s/grails.servlet.version = \"2.5\"/grails.servlet.version = \"3.0\"/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	
 	if [ $GRAILS_VER == "2.1.5" ]; then
 		perl -i -pe "s/legacyResolve/\/\/legacyResolve/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
@@ -220,29 +214,33 @@ EOF
 		perl -i -pe "s/dependencies {.*$/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	fi
 
-	grails compile
-
-	echo "Creating Vibe Servers ...."
-
-	grails create-vibe-server $PACKAGE.Chat $PACKAGE.Notification $PACKAGE.Public
-
 	echo "Copying files ...."
 
-	cp $SOURCE_DIR/grails-app/conf/UrlMappings.groovy $APP_DIR/grails-app/conf/
-	
-	#cp $SOURCE_DIR/grails-app/views/layouts/main.gsp $APP_DIR/grails-app/views/layouts/
-	
-	cp -r $SOURCE_DIR/grails-app/views/vibeTest $APP_DIR/grails-app/views/
+	cp -r $SOURCE_DIR/grails-app/conf/UrlMappings.groovy $APP_DIR/grails-app/conf/
 
+	cp -r $SOURCE_DIR/grails-app/conf/DroolsConfig.groovy $APP_DIR/grails-app/conf/
+
+	cp -r $SOURCE_DIR/grails-app/domain/* $APP_DIR/grails-app/domain/
+	rm  $APP_DIR/grails-app/domain/grails/plugin/drools_sample/DroolsRule.groovy
+	
 	cp -r $SOURCE_DIR/grails-app/controllers/* $APP_DIR/grails-app/controllers/
+	
+	cp -r $SOURCE_DIR/grails-app/views/test $APP_DIR/grails-app/views/
 
-	cp -r $SOURCE_DIR/grails-app/services/* $APP_DIR/grails-app/services/
+	cp -r $SOURCE_DIR/src/rules $APP_DIR/src/
 
 	cp -r $SOURCE_DIR/test/functional $APP_DIR/test/
 
-	cd $TEST_DIR/$APP_NAME
+	grails compile
+
+	echo "Creating Drools Domain ...."
+
+	grails create-drools-domain $PACKAGE.DroolsRule
+
+	cp -r $SOURCE_DIR/grails-app/conf/BootStrap.groovy $APP_DIR/grails-app/conf/
 
 	grails compile
+	
 	grails -Dgeb.env=chrome test-app functional:
 }
 
@@ -310,7 +308,7 @@ packagePlugin
 
 if [ $1 == "all" ]; then
 	# testApp using all containers	
-	GEB_DIR=$TEST_DIR/vibeTest-ALL-CONTAINERS-$DATE
+	GEB_DIR=$TEST_DIR/droolsTest-ALL-CONTAINERS-$DATE
 	mkdir $GEB_DIR	
 	HTMLFILE=$GEB_DIR/index.html
 	touch $HTMLFILE
@@ -335,7 +333,7 @@ if [ $1 == "all" ]; then
 else
 	# testApp using a specific container
 	CONTAINER=$1
-	GEB_DIR=$TEST_DIR/vibeTest-$CONTAINER-$DATE
+	GEB_DIR=$TEST_DIR/droolsTest-$CONTAINER-$DATE
 	mkdir $GEB_DIR	
 	HTMLFILE=$GEB_DIR/index.html
 	touch $HTMLFILE
