@@ -12,9 +12,9 @@ PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-drools"
 SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-drools-sample"
 CONTAINERS=(jetty tomcat)
 FORKED_VERSIONS=( 2.3.0 2.3.1 )
-LEGACY_VERSIONS=( 2.1.5 )
+LEGACY_VERSIONS=( 2.0.4 2.1.5 )
 JETTY_VERSIONS=( 2.3.9 2.4.4 )
-VERSIONS=( 2.1.5 2.2.5 2.3.9 2.4.4 )
+VERSIONS=( 2.0.4 2.1.5 2.2.5 2.3.9 2.4.4 )
 DATE=$(date +%Y-%m-%d_%T)
 
 # Do not change any variables below this line.
