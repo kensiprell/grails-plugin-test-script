@@ -1,6 +1,6 @@
 #!/bin/bash
 BROWSER="/Applications/Google Chrome.app"
-GEB_VER=0.10.0
+GEB_VER=0.9.2
 SELENIUM_VER=2.41.0
 JETTY_PLUGIN_VER=3.0.0
 APP_NAME="grails-drools-sample"
@@ -14,13 +14,51 @@ CONTAINERS=(jetty tomcat)
 FORKED_VERSIONS=( 2.3.0 2.3.1 )
 LEGACY_VERSIONS=( 2.0.4 2.1.5 )
 JETTY_VERSIONS=( 2.3.9 2.4.4 )
-VERSIONS=( 2.0.4 2.1.5 2.2.5 2.3.9 2.4.4 )
+#VERSIONS=( 2.0.4 2.1.5 2.2.5 2.3.9 2.4.4 )
+VERSIONS=( 2.2.5 2.3.9 2.4.4 )
 DATE=$(date +%Y-%m-%d_%T)
 
 # Do not change any variables below this line.
 START_TIME=$(date +"%Y-%m-%d %T")
 START_SECONDS=$(date +"%s")
 ARG_CHECK=false
+read -d '' LEGACY_DEP <<EOF
+    dependencies {
+        compile "org.drools:drools-compiler:6.1.0.Final", {
+        	excludes "activation", "antlr-runtime", "cdi-api", "drools-core", "ecj", "glazedlists_java15",
+        	         "gunit", "janino", "junit", "logback-classic", "mockito-all", "mvel2",
+        	         "org.osgi.compendium", "org.osgi.core", "protobuf-java", "quartz", "slf4j-api",
+        	         "stax-api", "weld-se-core", "xstream"
+        }
+        compile "org.drools:drools-core:6.1.0.Final", {
+        	excludes "activation", "antlr", "antlr-runtime", "cdi-api", "junit", "kie-api", "kie-internal",
+        	         "logback-classic", "mockito-all", "mvel2", "org.osgi.compendium", "org.osgi.core",
+        	         "protobuf-java", "slf4j-api", "stax-api", "xstream"
+        }
+        compile "org.drools:drools-decisiontables:6.1.0.Final", {
+        	excludes "commons-io", "drools-compiler", "drools-core", "drools-templates", "junit", "logback-classic",
+        	         "mockito-all", "org.osgi.compendium", "org.osgi.core", "poi-ooxml", "slf4j-api"
+        }
+        compile "org.drools:drools-jsr94:6.1.0.Final", {
+        	excludes "drools-compiler", "drools-core", "drools-decisiontables", "jsr94", "jsr94-sigtest",
+        	         "jsr94-tck", "junit", "mockito-all"
+        }
+        compile "org.drools:drools-verifier:6.1.0.Final", {
+        	excludes "drools-compiler", "guava", "itext", "junit", "kie-api", "mockito-all", "xstream"
+        }
+        compile "org.kie:kie-api:6.1.0.Final", {
+        	excludes "activation", "cdi-api", "jms", "junit", "mockito-all", "org.osgi.compendium",
+        	         "org.osgi.core", "quartz", "slf4j-api", "stax-api", "xstream"
+        }
+        compile "org.kie:kie-internal:6.1.0.Final", {
+        	excludes "cdi-api", "junit", "kie-api", "mockito-all", "slf4j-api", "xstream"
+        }
+        compile "org.kie:kie-spring:6.1.0.Final", {
+        	excludes "antlr-runtime", "cdi-api", "commons-logging", "drools-compiler", "drools-core", "drools-core",
+        	         "drools-decisiontables", "ecj", "h2", "hibernate-entitymanager", "hibernate-jpa-2.0-api",
+        	         "kie-api", "kie-internal", "logback-classic", "named-kiesession", "slf4j-api", "xstream"
+        }
+EOF
 read -d '' TEST_DEP <<EOF
 	dependencies {
 		test "org.gebish:geb-spock:$GEB_VER"
@@ -167,8 +205,8 @@ EOF
 	echo "Deleting cached project ...."
 	rm -r $HOME_DIR/.grails/$GRAILS_VER/projects/$APPNAME
 	
-	echo "Deleting Ivy drools plugin cache ...."
-	rm -r $HOME_DIR/.grails/ivy-cache/org.grails.plugins/drools*
+	echo "Deleting Ivy cache ...."
+	rm -r $HOME_DIR/.grails/ivy-cache/org.grails.plugins/drools/*
 
 	echo "Deleting test application directory ...."
 	cd $TEST_DIR
@@ -196,6 +234,10 @@ EOF
 	else
 		perl -i -pe "s/legacyResolve true/legacyResolve false/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	fi
+
+	#if [ $GRAILS_VER == "2.2.5" ]; then
+		#perl -i -pe "s/dependencies {.*$/$LEGACY_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	#fi
 
 	perl -i -pe "s!repositories {!$REPOSITORIES!g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
@@ -230,8 +272,15 @@ EOF
 	cp -r $SOURCE_DIR/src/rules $APP_DIR/src/
 
 	cp -r $SOURCE_DIR/test/functional $APP_DIR/test/
-
-	grails compile
+	
+	if [ $GRAILS_VER == "2.2.5" ]; then
+		grails refresh-dependencies 
+		find $HOME_DIR/.grails/ivy-cache/org.springframework -type f -name *3.2.11* | xargs rm
+		find $HOME_DIR/.grails/ivy-cache/org.springframework -type f -name *4.0.7* | xargs rm		
+		grails compile
+	else 
+		grails compile
+	fi
 
 	echo "Creating Drools Domain ...."
 
