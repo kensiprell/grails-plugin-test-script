@@ -1,22 +1,34 @@
 #!/bin/bash
-BROWSER="/Applications/Google Chrome.app"
-GEB_VER=0.9.2
-SELENIUM_VER=2.41.0
-JETTY_PLUGIN_VER=3.0.0
-APP_NAME="grails-drools-sample"
-PACKAGE="grails.plugin.drools_sample"
-HOME_DIR=$(echo $HOME)
-TEST_DIR="$(pwd)"
-APP_DIR="$TEST_DIR/$APP_NAME"
-PLUGIN_DIR="$HOME_DIR/Development/Plugins/grails-drools"
-SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-drools-sample"
-CONTAINERS=(jetty tomcat)
-FORKED_VERSIONS=( 2.3.0 2.3.1 )
-LEGACY_VERSIONS=( 2.0.4 2.1.5 )
-JETTY_VERSIONS=( 2.3.9 2.4.4 )
-#VERSIONS=( 2.0.4 2.1.5 2.2.5 2.3.9 2.4.4 )
-VERSIONS=( 2.2.5 2.3.9 2.4.4 )
-DATE=$(date +%Y-%m-%d_%T)
+
+# Set Defaults
+[[ -z $APP_NAME ]] && APP_NAME="grails-drools-sample"
+[[ -z $BASE_DIR ]] &&  BASE_DIR=$(echo $HOME)
+[[ -z $PLUGIN_DIR ]] && PLUGIN_DIR="$BASE_DIR/Development/Plugins/grails-drools"
+[[ -z $SOURCE_DIR ]] && SOURCE_DIR="$BASE_DIR/Development/Plugins/grails-drools-sample"
+[[ -z $TEST_DIR ]] && TEST_DIR="$(pwd)"
+[[ -z $APP_DIR ]] && APP_DIR="$TEST_DIR/$APP_NAME"
+[[ -z $BROWSER ]] && BROWSER="/Applications/Google Chrome.app"
+[[ -z $GEB_VER ]] && GEB_VER=0.9.2
+[[ -z $SELENIUM_VER ]] && SELENIUM_VER=2.43.1
+[[ -z $JETTY_PLUGIN_VER ]] && JETTY_PLUGIN_VER=3.0.0
+[[ -z $PACKAGE ]] && PACKAGE="grails.plugin.drools_sample"
+[[ -z $APP_DIR ]] && APP_DIR="$TEST_DIR/$APP_NAME"
+[[ -z $CONTAINERS ]] && CONTAINERS=(jetty tomcat)
+[[ -z $FORKED_VERSIONS ]] && FORKED_VERSIONS=( 2.3.0 2.3.1 )
+[[ -z $LEGACY_VERSIONS ]] && LEGACY_VERSIONS=( 2.0.4 2.1.5 )
+[[ -z $JETTY_VERSIONS ]] && JETTY_VERSIONS=( 2.3.9 2.4.4) 
+#[[ -z $VERSIONS ]] && VERSIONS=( 2.0.4 2.1.5 2.2.5 2.3.9 2.4.4 )
+[[ -z $VERSIONS ]] && VERSIONS=( 2.2.5 2.3.9 2.4.4 )
+[[ -z $DATE ]] && DATE=$(date +%Y-%m-%d_%T)
+[[ -z $MAVEN_BASE_URL ]] && MAVEN_BASE_URL="http://localhost:8081/artifactory"
+[[ -z $MAVEN_RELEASE_URL ]] && MAVEN_RELEASE_URL="$MAVEN_BASE_URL/plugins-release-local/"
+[[ -z $MAVEN_SNAPSHOT_URL ]] && MAVEN_SNAPSHOT_URL="$MAVEN_BASE_URL/plugins-snapshot-local/"
+
+# Check for Browser
+if [ ! -e "$BROWSER" ]; then
+   echo "Error: No Browser found under $BROWSER"
+   exit 1
+fi
 
 # Do not change any variables below this line.
 START_TIME=$(date +"%Y-%m-%d %T")
@@ -154,7 +166,7 @@ openBrowser() {
 }
 
 packagePlugin() {
-	ARTIFACTORY=`curl -s --head http://localhost:8081/artifactory | head -n 1 | wc -l`
+	ARTIFACTORY=`curl -s --head "$MAVEN_BASE_URL" | head -n 1 | wc -l`
 	if [ $ARTIFACTORY == "0" ]; then
 		echo "Starting Artifactory ...."
 		artifactory.sh start
@@ -191,8 +203,8 @@ read -d '' TEST_DEP_PLUGIN <<EOF
 EOF
 read -d '' REPOSITORIES <<EOF
 	repositories {
-		mavenRepo "http://localhost:8081/artifactory/plugins-snapshot-local/"
-		mavenRepo "http://localhost:8081/artifactory/plugins-release-local/"
+		mavenRepo "$MAVEN_SNAPSHOT_URL" 
+		mavenRepo "$MAVEN_RELEASE_URL"
 EOF
 
 	source ~/.gvm/bin/gvm-init.sh
@@ -203,10 +215,10 @@ EOF
 	fi
 	
 	echo "Deleting cached project ...."
-	rm -r $HOME_DIR/.grails/$GRAILS_VER/projects/$APPNAME
+	rm -r $BASE_DIR/.grails/$GRAILS_VER/projects/$APPNAME
 	
 	echo "Deleting Ivy cache ...."
-	rm -r $HOME_DIR/.grails/ivy-cache/org.grails.plugins/drools/*
+	rm -r $BASE_DIR/.grails/ivy-cache/org.grails.plugins/drools/*
 
 	echo "Deleting test application directory ...."
 	cd $TEST_DIR
@@ -272,11 +284,11 @@ EOF
 	cp -r $SOURCE_DIR/src/rules $APP_DIR/src/
 
 	cp -r $SOURCE_DIR/test/functional $APP_DIR/test/
-	
+
 	if [ $GRAILS_VER == "2.2.5" ]; then
 		grails refresh-dependencies 
-		find $HOME_DIR/.grails/ivy-cache/org.springframework -type f -name *3.2.11* | xargs rm
-		find $HOME_DIR/.grails/ivy-cache/org.springframework -type f -name *4.0.7* | xargs rm		
+		find $BASE_DIR/.grails/ivy-cache/org.springframework -type f -name *3.2.11* | xargs rm
+		find $BASE_DIR/.grails/ivy-cache/org.springframework -type f -name *4.0.7* | xargs rm		
 		grails compile
 	else 
 		grails compile
