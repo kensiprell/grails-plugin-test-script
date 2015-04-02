@@ -8,17 +8,16 @@
 [[ -z $TEST_DIR ]] && TEST_DIR="$(pwd)"
 [[ -z $APP_DIR ]] && APP_DIR="$TEST_DIR/$APP_NAME"
 [[ -z $BROWSER ]] && BROWSER="/Applications/Google Chrome.app"
-[[ -z $GEB_VER ]] && GEB_VER=0.9.2
+[[ -z $DROOLS_VER ]] && DROOLS_VER=6.2.0.Final
+[[ -z $GEB_VER ]] && GEB_VER=0.9.3
 [[ -z $SELENIUM_VER ]] && SELENIUM_VER=2.43.1
 [[ -z $JETTY_PLUGIN_VER ]] && JETTY_PLUGIN_VER=3.0.0
 [[ -z $PACKAGE ]] && PACKAGE="grails.plugin.drools_sample"
 [[ -z $APP_DIR ]] && APP_DIR="$TEST_DIR/$APP_NAME"
 [[ -z $CONTAINERS ]] && CONTAINERS=(jetty tomcat)
-[[ -z $FORKED_VERSIONS ]] && FORKED_VERSIONS=( 2.3.0 2.3.1 )
-[[ -z $LEGACY_VERSIONS ]] && LEGACY_VERSIONS=( 2.0.4 2.1.5 )
-[[ -z $JETTY_VERSIONS ]] && JETTY_VERSIONS=( 2.3.9 2.4.4) 
-#[[ -z $VERSIONS ]] && VERSIONS=( 2.0.4 2.1.5 2.2.5 2.3.9 2.4.4 )
-[[ -z $VERSIONS ]] && VERSIONS=( 2.2.5 2.3.9 2.4.4 )
+[[ -z $GRAILS_BUILD_VER ]] && GRAILS_BUILD_VER=2.4.5
+[[ -z $JETTY_VERSIONS ]] && JETTY_VERSIONS=( 2.3.9 2.4.5) 
+[[ -z $VERSIONS ]] && VERSIONS=( 2.3.9 2.4.5 )
 [[ -z $DATE ]] && DATE=$(date +%Y-%m-%d_%T)
 [[ -z $MAVEN_BASE_URL ]] && MAVEN_BASE_URL="http://localhost:8081/artifactory"
 [[ -z $MAVEN_RELEASE_URL ]] && MAVEN_RELEASE_URL="$MAVEN_BASE_URL/plugins-release-local/"
@@ -36,36 +35,36 @@ START_SECONDS=$(date +"%s")
 ARG_CHECK=false
 read -d '' LEGACY_DEP <<EOF
     dependencies {
-        compile "org.drools:drools-compiler:6.1.0.Final", {
+        compile "org.drools:drools-compiler:$DROOLS_VER", {
         	excludes "activation", "antlr-runtime", "cdi-api", "drools-core", "ecj", "glazedlists_java15",
         	         "gunit", "janino", "junit", "logback-classic", "mockito-all", "mvel2",
         	         "org.osgi.compendium", "org.osgi.core", "protobuf-java", "quartz", "slf4j-api",
         	         "stax-api", "weld-se-core", "xstream"
         }
-        compile "org.drools:drools-core:6.1.0.Final", {
+        compile "org.drools:drools-core:$DROOLS_VER", {
         	excludes "activation", "antlr", "antlr-runtime", "cdi-api", "junit", "kie-api", "kie-internal",
         	         "logback-classic", "mockito-all", "mvel2", "org.osgi.compendium", "org.osgi.core",
         	         "protobuf-java", "slf4j-api", "stax-api", "xstream"
         }
-        compile "org.drools:drools-decisiontables:6.1.0.Final", {
+        compile "org.drools:drools-decisiontables:$DROOLS_VER", {
         	excludes "commons-io", "drools-compiler", "drools-core", "drools-templates", "junit", "logback-classic",
         	         "mockito-all", "org.osgi.compendium", "org.osgi.core", "poi-ooxml", "slf4j-api"
         }
-        compile "org.drools:drools-jsr94:6.1.0.Final", {
+        compile "org.drools:drools-jsr94:$DROOLS_VER", {
         	excludes "drools-compiler", "drools-core", "drools-decisiontables", "jsr94", "jsr94-sigtest",
         	         "jsr94-tck", "junit", "mockito-all"
         }
-        compile "org.drools:drools-verifier:6.1.0.Final", {
+        compile "org.drools:drools-verifier:$DROOLS_VER", {
         	excludes "drools-compiler", "guava", "itext", "junit", "kie-api", "mockito-all", "xstream"
         }
-        compile "org.kie:kie-api:6.1.0.Final", {
+        compile "org.kie:kie-api:$DROOLS_VER", {
         	excludes "activation", "cdi-api", "jms", "junit", "mockito-all", "org.osgi.compendium",
         	         "org.osgi.core", "quartz", "slf4j-api", "stax-api", "xstream"
         }
-        compile "org.kie:kie-internal:6.1.0.Final", {
+        compile "org.kie:kie-internal:$DROOLS_VER", {
         	excludes "cdi-api", "junit", "kie-api", "mockito-all", "slf4j-api", "xstream"
         }
-        compile "org.kie:kie-spring:6.1.0.Final", {
+        compile "org.kie:kie-spring:$DROOLS_VER", {
         	excludes "antlr-runtime", "cdi-api", "commons-logging", "drools-compiler", "drools-core", "drools-core",
         	         "drools-decisiontables", "ecj", "h2", "hibernate-entitymanager", "hibernate-jpa-2.0-api",
         	         "kie-api", "kie-internal", "logback-classic", "named-kiesession", "slf4j-api", "xstream"
@@ -143,9 +142,9 @@ for container in "${CONTAINERS[@]}"; do
 					ARG_CHECK=true
 				fi
 			done
-		fi	
+		fi
 	fi
-done	
+done
 if [ "$1" == "all" ]; then
 	ARG_CHECK=true
 fi
@@ -175,8 +174,7 @@ packagePlugin() {
 
 	echo "Packaging plugin ...."
 	source ~/.gvm/bin/gvm-init.sh
-	VERSIONS_LENGTH=`expr ${#VERSIONS[@]} - 1`
-	gvm use grails 
+	gvm use grails $GRAILS_BUILD_VER
 	cd $PLUGIN_DIR
 	PLUGIN_VER=$(grep "def version = .*$" DroolsGrailsPlugin.groovy | grep -o \".*\" | tr -d '"')
 	rm *.zip
@@ -230,44 +228,19 @@ EOF
 	
 	echo "Modifying BuildConfig.groovy to resolve test and plugin dependencies ...."
 	
-	if [[ $FORKED_VERSIONS[$GRAILS_VER] ]]; then
-		perl -i -pe "s/console: .*$/console: false/" $APP_DIR/grails-app/conf/BuildConfig.groovy
-		perl -i -pe "s/run: .*$/run: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy
-		perl -i -pe "s/test: .*$/test: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy
-		perl -i -pe "s/war: .*$/war: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy		
-	fi
-	
 	if [ $CONTAINER == "jetty" ]; then
 		perl -i -pe "s/build.*:tomcat:.*$/$JETTY_PLUGIN/" $APP_DIR/grails-app/conf/BuildConfig.groovy
+		perl -i -pe "s/test: .*$/test: false,/" $APP_DIR/grails-app/conf/BuildConfig.groovy
 	fi
 	
-	if [ $GRAILS_VER == "2.1.5" ]; then
-		perl -i -pe "s/legacyResolve/\/\/legacyResolve/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-	else
-		perl -i -pe "s/legacyResolve true/legacyResolve false/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-	fi
-
-	#if [ $GRAILS_VER == "2.2.5" ]; then
-		#perl -i -pe "s/dependencies {.*$/$LEGACY_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-	#fi
+	perl -i -pe "s/grails.project.dependency.resolution/grails.plugin.drools.drlFileLocation = 'drools-rules'\ngrails.project.dependency.resolution/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
 	perl -i -pe "s!repositories {!$REPOSITORIES!g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
 	perl -i -pe "s/plugins {/$TEST_DEP_PLUGIN/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
 
-	for version in "${LEGACY_VERSIONS[@]}"; do
-		if [ "$version" == "$GRAILS_VER" ]; then
-			LEGACY=true
-			break
-		fi
-	done
-
-	if [ $LEGACY == true ]; then
-		perl -i -pe "s/dependencies {.*$/$TEST_DEP_LEGACY/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-	else
-		perl -i -pe "s/dependencies {.*$/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
-	fi
-
+	perl -i -pe "s/dependencies {.*$/$TEST_DEP/g" $APP_DIR/grails-app/conf/BuildConfig.groovy
+	
 	echo "Copying files ...."
 
 	cp -r $SOURCE_DIR/grails-app/conf/UrlMappings.groovy $APP_DIR/grails-app/conf/
@@ -276,12 +249,12 @@ EOF
 
 	cp -r $SOURCE_DIR/grails-app/domain/* $APP_DIR/grails-app/domain/
 	rm  $APP_DIR/grails-app/domain/grails/plugin/drools_sample/DroolsRule.groovy
-	
+
 	cp -r $SOURCE_DIR/grails-app/controllers/* $APP_DIR/grails-app/controllers/
-	
+
 	cp -r $SOURCE_DIR/grails-app/views/test $APP_DIR/grails-app/views/
 
-	cp -r $SOURCE_DIR/src/rules $APP_DIR/src/
+	cp -r $SOURCE_DIR/src/resources $APP_DIR/src/
 
 	cp -r $SOURCE_DIR/test/functional $APP_DIR/test/
 
@@ -301,7 +274,7 @@ EOF
 	cp -r $SOURCE_DIR/grails-app/conf/BootStrap.groovy $APP_DIR/grails-app/conf/
 
 	grails clean
-	
+
 	grails -Dgeb.env=chrome test-app functional:
 }
 
@@ -368,7 +341,7 @@ finishHTML() {
 packagePlugin
 
 if [ $1 == "all" ]; then
-	# testApp using all containers	
+	# testApp using all containers
 	GEB_DIR=$TEST_DIR/droolsTest-ALL-CONTAINERS-$DATE
 	mkdir $GEB_DIR	
 	HTMLFILE=$GEB_DIR/index.html
