@@ -16,8 +16,8 @@
 [[ -z $APP_DIR ]] && APP_DIR="$TEST_DIR/$APP_NAME"
 [[ -z $CONTAINERS ]] && CONTAINERS=(jetty tomcat)
 [[ -z $GRAILS_BUILD_VER ]] && GRAILS_BUILD_VER=2.4.5
-[[ -z $JETTY_VERSIONS ]] && JETTY_VERSIONS=( 2.3.9 2.4.5) 
-[[ -z $VERSIONS ]] && VERSIONS=( 2.3.9 2.4.5 )
+[[ -z $JETTY_VERSIONS ]] && JETTY_VERSIONS=( 2.3.11 2.4.5) 
+[[ -z $VERSIONS ]] && VERSIONS=( 2.3.11 2.4.5 )
 [[ -z $DATE ]] && DATE=$(date +%Y-%m-%d_%T)
 [[ -z $MAVEN_BASE_URL ]] && MAVEN_BASE_URL="http://localhost:8081/artifactory"
 [[ -z $MAVEN_RELEASE_URL ]] && MAVEN_RELEASE_URL="$MAVEN_BASE_URL/plugins-release-local/"
@@ -121,8 +121,8 @@ showUsage() {
 	echo "    Jetty: ${JETTY_VERSIONS[@]}"
 	echo "    Tomcat: ${VERSIONS[@]}"
 	echo "    The test results are grouped by container and then version."
-	echo "$ ./drools.sh jetty 2.3.9"
-	echo "    will test the plugin and its application using Jetty and Grails version 2.3.9."
+	echo "$ ./drools.sh jetty 2.3.11"
+	echo "    will test the plugin and its application using Jetty and Grails version 2.3.11."
 	echo "$TEST_DIR will contain a test summary and geb html pages."
 	exit 0
 }
