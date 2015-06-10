@@ -1,7 +1,8 @@
 #!/bin/bash
 BROWSER="/Applications/Google Chrome.app"
+GRAILS_BUILD_VER=2.4.5
 GEB_VER=0.9.3
-SELENIUM_VER=2.41.0
+SELENIUM_VER=2.45.0
 JETTY_PLUGIN_VER=3.0.0
 APP_NAME="grails-atmosphere-meteor-test"
 PACKAGE="org.grails.plugins.atmosphere_meteor_sample"
@@ -13,8 +14,8 @@ SOURCE_DIR="$HOME_DIR/Development/Plugins/grails-atmosphere-meteor-sample"
 CONTAINERS=(jetty tomcat)
 FORKED_VERSIONS=( 2.3.0 2.3.1 )
 LEGACY_VERSIONS=( 2.1.5 )
-JETTY_VERSIONS=( 2.3.9 2.4.3 )
-VERSIONS=( 2.1.5 2.2.5 2.3.9 2.4.4 )
+JETTY_VERSIONS=( 2.3.11 2.4.5 2.5.0 )
+VERSIONS=( 2.1.5 2.2.5 2.3.11 2.4.5 2.5.0 )
 DATE=$(date +%Y-%m-%d_%T)
 
 # Do not change any variables below this line.
@@ -126,7 +127,7 @@ packagePlugin() {
 	echo "Packaging plugin ...."
 	source ~/.gvm/bin/gvm-init.sh
 	VERSIONS_LENGTH=`expr ${#VERSIONS[@]} - 1`
-	gvm use grails 
+	gvm use grails $GRAILS_BUILD_VER
 	cd $PLUGIN_DIR
 	PLUGIN_VER=$(grep "def version = .*$" AtmosphereMeteorGrailsPlugin.groovy | grep -o \".*\" | tr -d '"')
 	rm *.zip
